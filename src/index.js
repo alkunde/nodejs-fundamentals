@@ -3,32 +3,25 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 
-const customers = [];
-
 app.use(express.json());
 
-/**
- * GET    - Buscar uma informação dentro do servidor
- * POST   - Inserir uma informação no servidor
- * PUT    - Alterar uma informação no servidor
- * PATCH  - Alterar uma informação específica no servidor
- * DELETE - Deletar uma informação no servidor
- */
+const customers = [];
 
-/**
- * Tipos de parâmetros
- * 
- * Route Params => Identificar um recurso editar/deletar/buscar
- * Query Params => Paginação / Filtro
- * Body Params  => Os objetos inserção/alteração (JSON)
- */
+// Middleware
+function verifyIfExistsAccountCPF(request, response, next) {
+  const { cpf } = request.headers;
 
-/**
- * cpf  - string
- * name - string
- * id   - uuid
- * statement []
- */
+  const customer = customers.find((customer) => customer.cpf === cpf);
+
+  if (!customer) {
+    return response.status(400).json({ error: "Customer not found" });
+  }
+
+  request.customer = customer;
+
+  return next();
+}
+
 app.post("/account", (request, response) => {
   const { cpf, name } = request.body;
 
@@ -50,14 +43,8 @@ app.post("/account", (request, response) => {
   return response.status(201).send();
 });
 
-app.get("/statement", (request, response) => {
-  const { cpf } = request.headers;
-
-  const customer = customers.find(customer => customer.cpf === cpf);
-
-  if (!customer) {
-    return response.status(400).json({ error: "Customer not found" });
-  }
+app.get("/statement", verifyIfExistsAccountCPF, (request, response) => {
+  const { customer } = request;
 
   return response.json(customer.statement);
 });
